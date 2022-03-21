@@ -77,13 +77,17 @@ function useUser() {
 // Then go down to the `handleSubmit` from `UserSettings` and put that logic in
 // this function. It should accept: dispatch, user, and updates
 
-function updateUser(dispatch, user, formState) {
+async function updateUser(dispatch, user, formState) {
   dispatch({type: 'start update', updates: formState})
 
-  return userClient.updateUser(user, formState).then(
-    updatedUser => dispatch({type: 'finish update', updatedUser}),
-    error => dispatch({type: 'fail update', error}),
-  )
+  try {
+    const updatedUser = await userClient.updateUser(user, formState)
+    dispatch({type: 'finish update', updatedUser})
+    return updatedUser
+  } catch (error) {
+    dispatch({type: 'fail update', error})
+    return Promise.reject(error)
+  }
 }
 
 // export {UserProvider, useUser}
