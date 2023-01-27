@@ -3,6 +3,7 @@
 
 import * as React from 'react'
 import {Switch} from '../switch'
+import warning from 'warning'
 
 const callAll =
   (...fns) =>
@@ -28,6 +29,29 @@ function toggleReducer(state, {type, initialState}) {
   }
 }
 
+function useControlledSwitchWarning(controlPropValue) {
+  const isControlled = controlPropValue !== null
+  const {current: onWasControlled} = React.useRef(isControlled)
+
+  React.useEffect(() => {
+    warning(
+      isControlled === onWasControlled,
+      'swapping between controlled and uncontrolled states',
+    )
+  }, [isControlled, onWasControlled])
+}
+
+function useOnChangeReadOnlyWarning(controlPropValue, hasOnChange) {
+  const isControlled = controlPropValue !== null
+
+  React.useEffect(() => {
+    warning(
+      !isControlled || hasOnChange, // If condition is FALSE, we will display the warning
+      'Failed prop type: You provided an `on` prop to useToggle without an `onChange` handler. This will render a read-only field.',
+    )
+  }, [hasOnChange, isControlled])
+}
+
 function useToggle({
   initialOn = false,
   reducer = toggleReducer,
@@ -36,9 +60,18 @@ function useToggle({
 } = {}) {
   const {current: initialState} = React.useRef({on: initialOn})
   const [state, dispatch] = React.useReducer(reducer, initialState)
-  const onIsControlled = controlledOn != null
 
+  const onIsControlled = controlledOn != null
   const on = onIsControlled ? controlledOn : state.on
+
+  if (process.env.NODE_ENV !== 'production') {
+    // NODE_ENV wont change during runtime so these warnings can be ignored
+
+    // eslint-disable-next-line react-hooks/rules-of-hooks
+    useControlledSwitchWarning(controlledOn)
+    // eslint-disable-next-line react-hooks/rules-of-hooks
+    useOnChangeReadOnlyWarning(controlledOn, Boolean(onChange))
+  }
 
   function dispatchWithOnChange(action) {
     if (!onIsControlled) {
